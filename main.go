@@ -49,7 +49,7 @@ var jwtPublicKey rsa.PublicKey
 var db *sql.DB
 
 func loadAccountData(account int, page int) (*apiAccountData, error) {
-	accountData := &apiAccountData{}
+	accountData := &apiAccountData{Transactions: []apiAccountTx{}}
 	row := db.QueryRow("SELECT balance FROM account WHERE actno = $1", account)
 	err := row.Scan(&accountData.Balance)
 	if err != nil {
@@ -163,7 +163,7 @@ func handleCorsPreflight(w http.ResponseWriter, r *http.Request) bool {
 		if origin == "https://jan.monster" {
 			w.Header().Add("Access-Control-Request-Method", "GET")
 			w.Header().Add("Access-Control-Request-Method", "POST")
-			w.Header().Add("Origin", "https://jan.monster")
+			w.Header().Add("Access-Control-Allow-Origin", "https://jan.monster")
 			w.WriteHeader(http.StatusNoContent)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
