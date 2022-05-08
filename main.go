@@ -155,14 +155,36 @@ func handleApi(account int, sub string, w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+func handleCorsPreflight(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method == http.MethodOptions {
+		// methods := r.Header.Values("Access-Control-Request-Method")
+		// headers := r.Header.Values("Access-Control-Request-Headers")
+		origin := r.Header.Get("Origin")
+		if origin == "https://jan.monster" {
+			w.Header().Add("Access-Control-Request-Method", "GET")
+			w.Header().Add("Access-Control-Request-Method", "POST")
+			w.Header().Add("Origin", "https://jan.monster")
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		return true
+	}
+	return false
+}
+
 func authJWT(handler func(int, string, http.ResponseWriter, *http.Request, string)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if handleCorsPreflight(w, r) {
+			return
+		}
 		account, err := getAccount(r)
 		if err != nil {
 			log.Printf("Invalid request: %v", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		auth := r.Header.Get("Authorization")
 		tokenRx := regexp.MustCompile(`^Bearer\s+(\S+)`)
 		tokenMatch := tokenRx.FindStringSubmatch(auth)
