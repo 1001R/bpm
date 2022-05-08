@@ -47,6 +47,7 @@ type jwtClaims struct {
 
 var jwtPublicKey rsa.PublicKey
 var db *sql.DB
+var corsOrigin string
 
 func loadAccountData(account int, page int) (*apiAccountData, error) {
 	accountData := &apiAccountData{Transactions: []apiAccountTx{}}
@@ -100,6 +101,7 @@ func handleApiGetAccount(account int, w http.ResponseWriter, r *http.Request) {
 	} else {
 		if json, err := json.Marshal(accountData); err == nil {
 			w.Header().Add("Cache-Control", "no-store,no-cache")
+			addCorsHeaders(w, r)
 			w.Write(json)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -150,20 +152,22 @@ func handleApi(account int, sub string, w http.ResponseWriter, r *http.Request, 
 			if err := handleApiPostAccount(account, sub, w, r); err != nil {
 				log.Print(err)
 				w.WriteHeader(http.StatusInternalServerError)
+			} else {
+				addCorsHeaders(w, r)
 			}
 		}
 	}
 }
 
 func handleCorsPreflight(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method == http.MethodOptions {
+	if corsOrigin != "" && r.Method == http.MethodOptions {
 		// methods := r.Header.Values("Access-Control-Request-Method")
 		// headers := r.Header.Values("Access-Control-Request-Headers")
 		origin := r.Header.Get("Origin")
-		if origin == "https://jan.monster" {
-			w.Header().Add("Access-Control-Request-Method", "GET")
-			w.Header().Add("Access-Control-Request-Method", "POST")
-			w.Header().Add("Access-Control-Allow-Origin", "https://jan.monster")
+		if origin == corsOrigin {
+			w.Header().Add("Access-Control-Allow-Methods", "GET,POST")
+			w.Header().Add("Access-Control-Allow-Headers", "Authorization")
+			w.Header().Add("Access-Control-Allow-Origin", corsOrigin)
 			w.WriteHeader(http.StatusNoContent)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -171,6 +175,12 @@ func handleCorsPreflight(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	return false
+}
+
+func addCorsHeaders(w http.ResponseWriter, r *http.Request) {
+	if corsOrigin != "" {
+		w.Header().Add("Access-Control-Allow-Origin", corsOrigin)
+	}
 }
 
 func authJWT(handler func(int, string, http.ResponseWriter, *http.Request, string)) func(http.ResponseWriter, *http.Request) {
@@ -226,6 +236,7 @@ func main() {
 	if ping != "" {
 		http.HandleFunc("/"+ping, handlePing)
 	}
+	corsOrigin = os.Getenv("CORS_ORIGIN")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
