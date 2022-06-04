@@ -1,0 +1,24 @@
+{
+  "name": "bpm-backend",
+  "version": "1.0.0",
+  "description": "Bankhaus Patzmann & Monster",
+  "main": "server.mjs",
+  "repository": "https://github.com/1001R/bpm",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "author": "Philipp Neuner <philipp@neuner.email>",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "cookie-session": "^2.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "njwt": "^1.2.0",
+    "pg": "^8.7.3"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}
