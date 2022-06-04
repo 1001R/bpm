@@ -10,12 +10,11 @@ import 'dotenv/config'
 
 const { Pool } = pg
 
-async function db(tx, f) {
+async function db(tx, f, ...args) {
     const client = await pgPool.connect()
     try {
         if (tx) await client.query('BEGIN')
-        const args = Array.from(arguments)
-        const result = await f(client, ...args.slice(2))
+        const result = await f(client, ...args)
         if (tx) await client.query('COMMIT')
         return result
     } catch (error) {
@@ -57,7 +56,7 @@ async function fetchAccount(pgClient, accountNo, page = 0) {
 
 async function newTransaction(pgClient, accountNo, sub, amount, desc) {
     await pgClient.query('UPDATE account SET balance = balance + $1 WHERE actno = $2', [amount, accountNo])
-    await pgClient.query('INSERT INTO transactions (act, sub, tstamp, amount, descr) VALUES ($1, $2, $3, $4, $5)', [sub, Date.now(), amount, desc])
+    await pgClient.query('INSERT INTO transactions (act, sub, tstamp, amount, descr) VALUES ($1, $2, $3, $4, $5)', [accountNo, sub, new Date(), amount, desc])
 }
 
 // middleware
@@ -142,7 +141,7 @@ apiRouter.get('/account/:account', async (req, resp) => {
 })
 
 apiRouter.post('/account/:account', async (req, resp) => {
-    const sub = req.oidc.user.sub
+    const sub = req.session.user.sub
     const account = req.params.account
     await db(true, newTransaction, account, sub, req.body.amount, req.body.desc)
     resp.end()
