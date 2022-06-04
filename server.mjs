@@ -119,7 +119,7 @@ app.use(cors({
 app.use(session({
     keys: [process.env.SESSION_KEY],
     // sameSite: 'lax',
-    // sameSite: 'none'
+    sameSite: 'none'
     // Cookie Options
     // maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }))
