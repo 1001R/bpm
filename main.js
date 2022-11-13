@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs'
 import { initializeApp } from "firebase/app"
-import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth"
+import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth"
 import { 
     collection, 
     getDocs, 
@@ -20,6 +20,7 @@ import {
 const firebaseConfig = {
     apiKey: "AIzaSyBq5vo3zJ2wcGX4H3rN8pql9KKvjOlWC78",
     authDomain: "bankhaus-patzmann-monster.firebaseapp.com",
+    // authDomain: "bank.jan.monster",
     projectId: "bankhaus-patzmann-monster",
     storageBucket: "bankhaus-patzmann-monster.appspot.com",
     messagingSenderId: "541063019239",
@@ -32,6 +33,32 @@ async function init() {
     const authProvider = new GoogleAuthProvider()
     const auth = getAuth(app)
     auth.useDeviceLanguage()
+    this.login = async () => {
+        const authResult = await signInWithPopup(auth, authProvider)
+        if (authResult.user) {
+            this.logout = async () => {
+                this.menu = 'logout'
+                this.user = null
+                this.accountNo = null
+                this.db = null
+                this.parent = false
+                await signOut(auth)
+            }
+            const credential = GoogleAuthProvider.credentialFromResult(authResult)
+            const idTokenResult = await authResult.user.getIdTokenResult()
+            // The signed-in user info.
+            if (idTokenResult.claims.account) {
+                this.user = authResult.user
+                this.accountNo = idTokenResult.claims.account
+                this.db = db
+                this.parent = idTokenResult.claims.parent ?? false
+                window.dispatchEvent(new CustomEvent('refresh'))
+            } else {
+                await this.logout()
+            }
+        }
+    }
+    /*
     this.login = async () => await signInWithRedirect(auth, authProvider)
     onAuthStateChanged(auth, async user => {
         if (user) {
@@ -55,6 +82,7 @@ async function init() {
             }
         }
     })
+    */
 }
 
 async function fetchTransactions(pageIncrement) {
