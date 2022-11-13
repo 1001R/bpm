@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <script src="https://kit.fontawesome.com/6a11819f68.js" crossorigin="anonymous"></script>
+    <title>Bankhaus Patzmann & Monster</title>
+    <style>
+      [x-cloak] { display: none !important; }
+    </style>
+  </head>
+  <body x-data="data">
+
+    <nav class="navbar navbar-expand-md navbar-dark bg-primary sticky-top">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#"><i class="fa-solid fa-piggy-bank"></i></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav" x-show="user" x-cloak>
+            <li class="nav-item">
+              <a class="nav-link" :class="{ active: menu === 'transactions' }" aria-current="page" href="#" @click="menu='transactions'">Buchungen</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" :class="{ disabled: !parent, active: menu === 'deposit' }" href="#" @click="menu='deposit'">Einzahlung</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" :class="{ disabled: !parent, active: menu === 'withdrawal' }" href="#" @click="menu='withdrawal'">Auszahlung</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item" id="nav-login" x-show="!user">
+              <a id="btn-login" class="nav-link active" aria-current="page" href="#" @click="login()">Login</a>
+            </li>
+            <li class="nav-item" id="nav-logout" x-show="user">
+              <a id="btn-logout" class="nav-link active" aria-current="page" href="#" @click="logout()">
+                <span id="nav-user" class="me-2" x-text="user?.displayName"></span>
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container" x-show="user" x-cloak>
+      <div class="row">
+        <div class="col"></div>
+        <div class="col-8">
+          <div class="card my-4">
+            <div class="card-header">
+              Kontostand
+            </div>
+            <div class="card-body">
+              <p id="balance" class="card-text text-center fs-2 font-monospace" 
+                :class="{'text-success': _balance >= 0, 'text-danger': _balance < 0 }" 
+                x-text="balance" 
+                @refresh.window="fetchBalance()"
+                />
+            </div>
+          </div>
+        </div>
+        <div class="col"></div>
+      </div>
+    </div>
+
+    <div class="container" x-show="user && menu === 'transactions'" x-data="transactionList" @refresh.window="refresh()" x-cloak>
+      <div class="row">
+        <div class="col"></div>
+        <div class="col-8">
+          <table id="tbl-transactions" class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th scope="col">Datum</th>
+                <th scope="col">Kommentar</th>
+                <th scope="col" class="text-end">Betrag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="tx in transactions">
+                <tr>
+                  <td style="width:10rem" x-text="tx.uiTimestamp"></td>
+                  <td x-text="tx.description"></td>
+                  <td class="text-end font-monospace" :class="tx.amount < 0 && 'text-danger' || 'text-success'" style="width:10rem;white-space:pre;" x-text="tx.uiAmount"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <nav>
+            <ul class="pagination justify-content-end">
+              <li class="page-item" id="tx-prev" :class="page === 0 && 'disabled'">
+                <a class="page-link" href="#" aria-label="Previous" @click.prevent="prev()">
+                  <span aria-hidden="true"><i class="fa-solid fa-caret-left"></i></span>
+                </a>
+              </li>
+              <li class="page-item" id="tx-next" :class="lastPage && 'disabled'">
+                <a class="page-link" href="#" aria-label="Next" @click.prevent="next()">
+                  <span aria-hidden="true"><i class="fa-solid fa-caret-right"></i></span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        <div class="col"></div>
+      </div>
+    </div>
+
+    <div class="container" x-show="menu === 'withdrawal' || menu === 'deposit'" x-cloak>
+      <div class="row">
+        <div class="col"></div>
+        <div class="col-8">
+          <form 
+              :class="validated && 'was-validated'"
+              novalidate 
+              @submit.prevent.stop="doSubmit($el)" 
+              x-data="transactionData">
+            <div class="my-3">
+              <label for="frm-withdrawal-amount" class="form-label">Betrag</label>
+              <div class="input-group has-validation">
+                <span class="input-group-text">€</span>
+                <input type="text" class="form-control text-end" x-model="amount" inputmode="numeric" pattern="\d+([,.]\d{1,2})?" required>
+                <div class="invalid-feedback">
+                  Ungültiger Betrag
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="frm-withdrawal-desc" class="form-label">Verwendungszweck</label>
+              <div class="input-group has-validation">
+                <input type="text" class="form-control" placeholder="z.B. Schokolade" x-model="description">
+                <div class="invalid-feedback">
+                  Verwendungszweck nicht angegeben
+                </div>
+              </div>
+            </div>
+            <div class="d-flex flex-row-reverse">
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-coins me-2"></i>Buchen</button>
+            </div>
+          </form>
+        </div>
+        <div class="col"></div>
+      </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
