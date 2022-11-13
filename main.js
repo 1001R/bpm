@@ -140,13 +140,15 @@ function epochToString(epoch) {
 }
 
 function amountToString(cents) {
-    let s = cents.toString()
+    const negative = cents < 0
+    let s = cents.toString().replace(/^-/, '')
     const n = s.length
     if (n < 3) {
-        s = '0,' + s
+        s = '0,' + s + (n === 1 ? '0' : '')
     } else {
         s = s.substring(0, n - 2) + ',' + s.substring(n - 2)
     }
+    if (negative) s = '-' + s
     return '€ ' + s.padStart(8)
 }
 
@@ -178,13 +180,14 @@ window.data = {
 window.transactionData = {
     validated: false,
     amount: 1,
+    amountInput: '1',
     description: '',
     valid: false,
     async doSubmit(form) {
         this.valid = form.checkValidity()
         this.validated = true
         if (this.valid) {
-            const amount = this.amount * 100 * (this.menu === 'withdrawal' ? -1 : 1)
+            const amount = amountFromString(this.amount) * (this.menu === 'withdrawal' ? -1 : 1)
             await this.saveTransaction(amount, this.description)
             this.amount = 1
             this.description = ''
